@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-monitor
+  labels:
+    app: weather-monitor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weather-monitor
+  template:
+    metadata:
+      labels:
+        app: weather-monitor
+    spec:
+      containers:
+        - name: weather-monitor
+          image: weather-monitor:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-monitor
+spec:
+  selector:
+    app: weather-monitor
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30080
