@@ -1,9 +1,13 @@
 pipeline {
   agent any
 
+  tools {
+    nodejs 'Node20'
+  }
+
   environment {
     IMAGE_NAME = "weather-monitor"
-    IMAGE_TAG = "${env.BUILD_NUMBER}"
+    IMAGE_TAG  = "${env.BUILD_NUMBER}"
   }
 
   stages {
