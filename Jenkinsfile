@@ -39,7 +39,7 @@ pipeline {
         sh """
           KCTL='kubectl'
           command -v kubectl >/dev/null 2>&1 || KCTL='k3s kubectl'
-          \$KCTL apply -f k8s/deploy.yaml
+          \$KCTL apply -f k8s/deployment.yaml
           \$KCTL set image deployment/weather-monitor weather-monitor=${IMAGE_NAME}:${IMAGE_TAG}
           \$KCTL rollout status deployment/weather-monitor --timeout=120s
         """
