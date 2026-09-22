@@ -7,12 +7,6 @@ pipeline {
   }
 
   stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
     stage('Docker build') {
       steps {
         sh """
@@ -25,23 +19,16 @@ pipeline {
       }
     }
 
-    stage('Load image into k3s') {
+    stage('Run container') {
       steps {
         sh """
-          docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import - \
-          || docker save ${IMAGE_NAME}:${IMAGE_TAG} | k3s ctr images import -
-        """
-      }
-    }
-
-    stage('Deploy to Kubernetes') {
-      steps {
-        sh """
-          KCTL='kubectl'
-          command -v kubectl >/dev/null 2>&1 || KCTL='k3s kubectl'
-          \$KCTL apply -f k8s/deployment.yaml
-          \$KCTL set image deployment/weather-monitor weather-monitor=${IMAGE_NAME}:${IMAGE_TAG}
-          \$KCTL rollout status deployment/weather-monitor --timeout=120s
+          docker rm -f weather-monitor || true
+          docker run -d \
+            --name weather-monitor \
+            --restart unless-stopped \
+            -p 30080:80 \
+            ${IMAGE_NAME}:${IMAGE_TAG}
+          docker ps --filter name=weather-monitor
         """
       }
     }
