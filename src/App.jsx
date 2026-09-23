@@ -34,6 +34,28 @@ function formatClock(iso) {
   });
 }
 
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+      <path d="M20 20l-3.2-3.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <circle cx="12" cy="10" r="2.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -153,13 +175,30 @@ export default function App() {
   }
 
   const current = forecast?.current;
+  const placeLine = [city.admin, city.country]
+    .filter((part) => part && part !== city.name)
+    .join(", ");
+  const temps = daily.map((item) => item.max);
+  const weekHigh = temps.length ? Math.max(...temps) : 1;
+  const weekLow = daily.length ? Math.min(...daily.map((item) => item.min)) : 0;
+  const spread = Math.max(weekHigh - weekLow, 1);
 
   return (
-    <div className="page">
+    <div
+      className="page"
+      data-theme={currentMeta.icon}
+      data-period={current?.is_day ? "day" : "night"}
+    >
+      <div className="atmosphere" aria-hidden />
       <header className="topbar">
-        <div>
-          <p className="eyebrow">Weather Monitor</p>
-          <h1>Live conditions dashboard</h1>
+        <div className="brand">
+          <div className="logo-mark">
+            <WeatherIcon name={currentMeta.icon} size={26} />
+          </div>
+          <div>
+            <p className="eyebrow">Weather Monitor</p>
+            <h1>Live sky dashboard</h1>
+          </div>
         </div>
         <div className="build-chip" title="Image / pipeline version">
           build {BUILD_VERSION}
@@ -168,12 +207,16 @@ export default function App() {
 
       <section className="search-panel">
         <div className="search-wrap">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search a city to monitor"
-            aria-label="Search city"
-          />
+          <label className="search-field">
+            <SearchIcon />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search a city to monitor"
+              aria-label="Search city"
+              autoComplete="off"
+            />
+          </label>
           {suggestions.length > 0 && (
             <ul className="suggestions">
               {suggestions.map((item) => (
@@ -190,64 +233,65 @@ export default function App() {
           )}
         </div>
         <button type="button" className="ghost" onClick={useMyLocation}>
+          <PinIcon />
           Use my location
         </button>
       </section>
 
       {error && <p className="banner error">{error}</p>}
       {status === "loading" && !forecast && (
-        <p className="banner">Loading weather feed…</p>
+        <div className="skeleton" aria-busy="true" aria-label="Loading weather feed">
+          <div className="skeleton-card" />
+          <div className="skeleton-card" />
+        </div>
       )}
 
       {current && (
         <main className="layout">
           <article className="hero card">
             <div>
-              <p className="muted">
-                {city.name}
-                {city.admin || city.country
-                  ? ` · ${[city.admin, city.country]
-                      .filter((part) => part && part !== city.name)
-                      .join(", ")}`
-                  : ""}
+              <p className="place">
+                <strong>{city.name}</strong>
+                {placeLine ? <span className="muted">{placeLine}</span> : null}
+                <span className="chip">{current.is_day ? "Daytime" : "Night"}</span>
               </p>
               <div className="hero-temp">
-                <WeatherIcon name={currentMeta.icon} size={72} />
+                <WeatherIcon name={currentMeta.icon} size={86} />
                 <div>
                   <p className="temp">{Math.round(current.temperature_2m)}°</p>
-                  <p>{currentMeta.label}</p>
+                  <p className="condition">{currentMeta.label}</p>
                 </div>
               </div>
-              <p className="muted">
-                Feels like {Math.round(current.apparent_temperature)}° · Updated{" "}
-                {updatedAt ? updatedAt.toLocaleTimeString() : "—"}
+              <p className="hero-meta">
+                <span>Feels like {Math.round(current.apparent_temperature)}°</span>
+                <span>Updated {updatedAt ? updatedAt.toLocaleTimeString() : "—"}</span>
               </p>
             </div>
             <dl className="stats">
-              <div>
+              <div className="stat">
                 <dt>Humidity</dt>
                 <dd>{current.relative_humidity_2m}%</dd>
               </div>
-              <div>
+              <div className="stat">
                 <dt>Wind</dt>
                 <dd>
                   {Math.round(current.wind_speed_10m)} km/h{" "}
                   {windDirection(current.wind_direction_10m)}
                 </dd>
               </div>
-              <div>
+              <div className="stat">
                 <dt>Pressure</dt>
                 <dd>{Math.round(current.pressure_msl)} hPa</dd>
               </div>
-              <div>
+              <div className="stat">
                 <dt>Cloud cover</dt>
                 <dd>{current.cloud_cover}%</dd>
               </div>
-              <div>
+              <div className="stat">
                 <dt>UV index</dt>
                 <dd>{current.uv_index}</dd>
               </div>
-              <div>
+              <div className="stat">
                 <dt>Visibility</dt>
                 <dd>{Math.round(current.visibility / 1000)} km</dd>
               </div>
@@ -284,6 +328,7 @@ export default function App() {
             <div className="daily">
               {daily.map((item) => {
                 const meta = describeWeather(item.code);
+                const width = ((item.max - weekLow) / spread) * 100;
                 return (
                   <div key={item.time} className="day">
                     <span>{formatDay(item.time)}</span>
@@ -291,6 +336,9 @@ export default function App() {
                     <span className="range">
                       {Math.round(item.max)}° / {Math.round(item.min)}°
                     </span>
+                    <div className="temp-bar" aria-hidden>
+                      <span style={{ width: `${Math.max(width, 18)}%` }} />
+                    </div>
                     <small>{item.rain}% rain</small>
                   </div>
                 );
@@ -301,7 +349,8 @@ export default function App() {
       )}
 
       <footer>
-        Open-Meteo forecast · React demo for Jenkins / Docker / Kubernetes
+        <span>Open-Meteo forecast</span>
+        <span>React demo for Jenkins / Docker / Kubernetes</span>
       </footer>
     </div>
   );
